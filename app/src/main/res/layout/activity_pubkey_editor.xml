@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include layout="@layout/app_toolbar" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <EditText
+                android:id="@+id/pubkey_edit_nickname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/pubkey_nickname"
+                android:inputType="text"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/pubkey_edit_details"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textIsSelectable="true"
+                android:textSize="13sp"
+                android:textColor="?android:textColorSecondary" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/pubkey_edit_default"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/pubkey_default" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/pubkey_edit_startup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/pubkey_startup" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/pubkey_edit_confirmation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/pubkey_confirmation" />
+
+            <LinearLayout
+                android:id="@+id/pubkey_edit_password_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pubkey_change_password"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <EditText
+                    android:id="@+id/pubkey_edit_old_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/pubkey_password_old"
+                    android:inputType="textPassword"
+                    android:maxLines="1" />
+
+                <EditText
+                    android:id="@+id/pubkey_edit_new_password"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/pubkey_password_new"
+                    android:inputType="textPassword"
+                    android:maxLines="1" />
+
+                <EditText
+                    android:id="@+id/pubkey_edit_new_password2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/pubkey_password_repeat"
+                    android:inputType="textPassword"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/pubkey_edit_save"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/save" />
+
+            <Button
+                android:id="@+id/pubkey_edit_delete"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/ssh_delete" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

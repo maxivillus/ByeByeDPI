@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <include layout="@layout/app_toolbar" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <EditText
+                android:id="@+id/pubkey_nickname"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/pubkey_nickname"
+                android:inputType="text"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/pubkey_keytype"
+                android:textSize="14sp"
+                android:textColor="?android:textColorSecondary" />
+
+            <Spinner
+                android:id="@+id/pubkey_keytype"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <LinearLayout
+                android:id="@+id/pubkey_bits_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <EditText
+                    android:id="@+id/pubkey_bits"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="@string/pubkey_bits"
+                    android:inputType="number"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <EditText
+                android:id="@+id/pubkey_password"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/pubkey_password_optional"
+                android:inputType="textPassword"
+                android:maxLines="1" />
+
+            <EditText
+                android:id="@+id/pubkey_password2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:hint="@string/pubkey_password_repeat"
+                android:inputType="textPassword"
+                android:maxLines="1" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/pubkey_generate_startup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/pubkey_startup" />
+
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/pubkey_generate_confirmation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/pubkey_confirmation" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/pubkey_entropy_hint"
+                android:textSize="14sp" />
+
+            <io.github.romanvht.byedpi.view.EntropyView
+                android:id="@+id/pubkey_entropy"
+                android:layout_width="match_parent"
+                android:layout_height="140dp"
+                android:layout_marginTop="8dp"
+                android:background="?attr/colorSurfaceVariant" />
+
+            <TextView
+                android:id="@+id/pubkey_entropy_progress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textSize="12sp"
+                android:textColor="?android:textColorSecondary" />
+
+            <Button
+                android:id="@+id/pubkey_generate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/pubkey_generate_title" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</LinearLayout>

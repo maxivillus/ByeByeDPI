@@ -9,6 +9,9 @@ import androidx.core.content.edit
 import androidx.preference.*
 import io.github.romanvht.byedpi.R
 import io.github.romanvht.byedpi.BuildConfig
+import io.github.romanvht.byedpi.activities.LogsActivity
+import io.github.romanvht.byedpi.activities.PubkeyListActivity
+import io.github.romanvht.byedpi.activities.SshHostsActivity
 import io.github.romanvht.byedpi.activities.TestActivity
 import io.github.romanvht.byedpi.data.Mode
 import io.github.romanvht.byedpi.utility.*
@@ -46,6 +49,27 @@ class MainSettingsFragment : PreferenceFragmentCompat() {
         findPreferenceNotNull<Preference>("proxy_test")
             .setOnPreferenceClickListener {
                 val intent = Intent(context, TestActivity::class.java)
+                startActivity(intent)
+                true
+            }
+
+        findPreferenceNotNull<Preference>("ssh_hosts")
+            .setOnPreferenceClickListener {
+                val intent = Intent(context, SshHostsActivity::class.java)
+                startActivity(intent)
+                true
+            }
+
+        findPreferenceNotNull<Preference>("pubkeys")
+            .setOnPreferenceClickListener {
+                val intent = Intent(context, PubkeyListActivity::class.java)
+                startActivity(intent)
+                true
+            }
+
+        findPreferenceNotNull<Preference>("app_logs")
+            .setOnPreferenceClickListener {
+                val intent = Intent(context, LogsActivity::class.java)
                 startActivity(intent)
                 true
             }

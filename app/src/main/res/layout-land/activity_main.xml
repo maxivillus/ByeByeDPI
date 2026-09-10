@@ -67,6 +67,16 @@
             android:textColor="?android:textColorSecondary"
             tools:text="127.0.0.1:1080" />
 
+        <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/socks5_address"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:textSize="13sp"
+            android:gravity="center"
+            android:textColor="?android:textColorSecondary"
+            tools:text="SOCKS5: 127.0.0.1:1080" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/strategy_button"
             android:layout_width="wrap_content"

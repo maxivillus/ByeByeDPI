@@ -70,6 +70,12 @@ android {
         includeInBundle = false
     }
 
+    sourceSets {
+        getByName("main") {
+            java.srcDir("src/sshlib-java")
+        }
+    }
+
     splits {
         abi {
             isEnable = true
@@ -90,6 +96,12 @@ dependencies {
     implementation("androidx.preference:preference-ktx:1.2.1")
     implementation("com.google.android.material:material:1.13.0")
     implementation("com.google.code.gson:gson:2.14.0")
+    // sshlib is vendored from source (app/src/sshlib-java) for channel
+    // failure diagnostics; its runtime deps are kept here explicitly
+    implementation("org.connectbot:simplesocks:1.0.1")
+    implementation("com.google.crypto.tink:tink:1.21.0")
+    implementation("org.connectbot:jbcrypt:1.0.2")
+    implementation("asia.hombre:kyber:2.0.1")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")

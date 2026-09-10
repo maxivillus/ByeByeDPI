@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item
+        android:id="@+id/action_edit"
+        android:icon="@drawable/ic_edit"
+        android:title="@string/pubkey_menu_edit" />
+
+    <item
+        android:id="@+id/action_copy_public"
+        android:icon="@drawable/ic_content_copy"
+        android:title="@string/pubkey_copy_public" />
+
+    <item
+        android:id="@+id/action_export_public"
+        android:icon="@drawable/ic_file_download"
+        android:title="@string/pubkey_export_public" />
+
+    <item
+        android:id="@+id/action_copy_openssh"
+        android:icon="@drawable/ic_content_copy"
+        android:title="@string/pubkey_copy_openssh" />
+
+    <item
+        android:id="@+id/action_copy_pem"
+        android:icon="@drawable/ic_content_copy"
+        android:title="@string/pubkey_copy_pem" />
+
+    <item
+        android:id="@+id/action_copy_encrypted"
+        android:icon="@drawable/ic_lock"
+        android:title="@string/pubkey_copy_encrypted" />
+
+    <item
+        android:id="@+id/action_export_openssh"
+        android:icon="@drawable/ic_file_download"
+        android:title="@string/pubkey_export_openssh" />
+
+    <item
+        android:id="@+id/action_export_pem"
+        android:icon="@drawable/ic_file_download"
+        android:title="@string/pubkey_export_pem" />
+
+    <item
+        android:id="@+id/action_export_encrypted"
+        android:icon="@drawable/ic_lock"
+        android:title="@string/pubkey_export_encrypted" />
+
+    <item
+        android:id="@+id/action_delete"
+        android:icon="@drawable/ic_delete"
+        android:title="@string/ssh_delete" />
+
+</menu>

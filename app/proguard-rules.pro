@@ -5,6 +5,8 @@
 
 -keep class io.github.romanvht.byedpi.core.ByeDpiProxy { *; }
 
+-keep,allowoptimization class com.trilead.ssh2.** { *; }
+
 -keep,allowoptimization class io.github.romanvht.byedpi.core.TProxyService { *; }
 -keep,allowoptimization class io.github.romanvht.byedpi.activities.** { *; }
 -keep,allowoptimization class io.github.romanvht.byedpi.services.** { *; }

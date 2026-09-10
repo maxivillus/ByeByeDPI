@@ -25,6 +25,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.edit
 import androidx.lifecycle.lifecycleScope
 import io.github.romanvht.byedpi.R
+import io.github.romanvht.byedpi.core.SshTunnelManager
 import io.github.romanvht.byedpi.data.*
 import io.github.romanvht.byedpi.databinding.ActivityMainBinding
 import io.github.romanvht.byedpi.services.ServiceManager
@@ -128,10 +129,23 @@ class MainActivity : BaseActivity() {
                 STOPPED_BROADCAST -> updateStatus()
 
                 FAILED_BROADCAST -> {
+                    val appContext = applicationContext
+                    val sshError = if (SshHostUtils.isSshEnabled(appContext)) {
+                        appContext.getPreferences().getString("ssh_last_error", null)
+                    } else {
+                        null
+                    }
+                    val message = buildString {
+                        append(getString(R.string.failed_to_start, sender.name))
+                        if (!sshError.isNullOrBlank()) {
+                            append(": ")
+                            append(sshError)
+                        }
+                    }
                     Toast.makeText(
                         context,
-                        getString(R.string.failed_to_start, sender.name),
-                        Toast.LENGTH_SHORT,
+                        message,
+                        Toast.LENGTH_LONG,
                     ).show()
                     updateStatus()
                 }
@@ -355,6 +369,11 @@ class MainActivity : BaseActivity() {
         val (ip, port) = preferences.getProxyIpAndPort()
 
         binding.proxyAddress.text = getString(R.string.proxy_address, ip, port)
+
+        // Effective SOCKS5 endpoint for apps: with the SSH tunnel running
+        // traffic goes through its forwarder, otherwise through ciadpi
+        val socks5Port = SshTunnelManager.localPort.takeIf { it > 0 } ?: port
+        binding.socks5Address.text = getString(R.string.socks5_address, ip, socks5Port)
 
         when (status) {
             AppStatus.Halted -> {

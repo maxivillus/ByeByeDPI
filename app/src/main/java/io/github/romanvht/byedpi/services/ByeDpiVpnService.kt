@@ -13,30 +13,40 @@ import io.github.romanvht.byedpi.R
 import io.github.romanvht.byedpi.activities.MainActivity
 import io.github.romanvht.byedpi.core.ByeDpiProxy
 import io.github.romanvht.byedpi.core.ByeDpiProxyPreferences
+import io.github.romanvht.byedpi.core.PubkeyVault
+import io.github.romanvht.byedpi.core.SshTunnelManager
 import io.github.romanvht.byedpi.core.TProxyService
 import io.github.romanvht.byedpi.data.*
 import io.github.romanvht.byedpi.utility.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
+import java.io.IOException
+import java.security.KeyPair
 
 class ByeDpiVpnService : LifecycleVpnService() {
     private val byeDpiProxy = ByeDpiProxy()
     private var proxyJob: Job? = null
     private var tunFd: ParcelFileDescriptor? = null
     private val mutex = Mutex()
+    private var sshLocalPort: Int? = null
+    private var sshStateJob: Job? = null
 
     companion object {
         private val TAG: String = ByeDpiVpnService::class.java.simpleName
         private const val FOREGROUND_SERVICE_ID: Int = 1
         private const val PAUSE_NOTIFICATION_ID: Int = 3
         private const val NOTIFICATION_CHANNEL_ID: String = "ByeDPIVpn"
+        private const val SSH_CONNECT_TIMEOUT_MS: Long = 30_000
+        private const val SSH_MAX_ATTEMPTS: Int = 10
 
         private var status: ServiceStatus = ServiceStatus.Disconnected
     }
@@ -53,6 +63,7 @@ class ByeDpiVpnService : LifecycleVpnService() {
     override fun onDestroy() {
         super.onDestroy()
         tunFd?.close()
+        SshTunnelManager.stop()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -135,11 +146,28 @@ class ByeDpiVpnService : LifecycleVpnService() {
         try {
             mutex.withLock {
                 startProxy()
+                startSshTunnelIfNeeded()
                 startTun2Socks()
                 updateStatus(ServiceStatus.Connected)
             }
+        } catch (e: CancellationException) {
+            // Service is being torn down; the real cause (if any) was
+            // already recorded by whoever triggered the cancellation
+            Log.w(TAG, "VPN start cancelled", e)
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start VPN", e)
+            AppLog.e(TAG, "Failed to start VPN: ${e.message}")
+            if (SshHostUtils.isSshEnabled(this)) {
+                // Keep the ciadpi exit code record: it outranks SSH errors
+                val prefs = getPreferences()
+                val current = prefs.getString("ssh_last_error", null)
+                if (current == null || !current.startsWith("ciadpi exited")) {
+                    prefs.edit()
+                        .putString("ssh_last_error", e.message ?: e.javaClass.simpleName)
+                        .commit()
+                }
+            }
             updateStatus(ServiceStatus.Failed)
             stop()
         }
@@ -161,16 +189,14 @@ class ByeDpiVpnService : LifecycleVpnService() {
     private suspend fun stop() {
         Log.i(TAG, "Stopping")
 
-        if (status != ServiceStatus.Connected) {
-            Log.w(TAG, "VPN not connected")
-            updateStatus(ServiceStatus.Disconnected)
-            return
-        }
-
+        // Cleanup must run regardless of the reported status: a failed start
+        // leaves ciadpi running, and skipping it makes the next start fail
+        // with "proxy already running" (exit code -1)
         mutex.withLock {
             try {
                 withContext(Dispatchers.IO) {
                     stopProxy()
+                    stopSshTunnel()
                     stopTun2Socks()
                 }
             } catch (e: Exception) {
@@ -199,6 +225,12 @@ class ByeDpiVpnService : LifecycleVpnService() {
 
             if (code != 0) {
                 Log.e(TAG, "Proxy stopped with code $code")
+                AppLog.w(TAG, "ciadpi exited with code $code")
+                // Record the exit code: it is the most common hidden cause
+                // of "VPN start failed"
+                getPreferences().edit()
+                    .putString("ssh_last_error", "ciadpi exited with code $code")
+                    .commit()
                 updateStatus(ServiceStatus.Failed)
                 stopTun2Socks()
                 stopSelf()
@@ -210,11 +242,6 @@ class ByeDpiVpnService : LifecycleVpnService() {
 
     private suspend fun stopProxy() {
         Log.i(TAG, "Stopping proxy")
-
-        if (status == ServiceStatus.Disconnected) {
-            Log.w(TAG, "Proxy already disconnected")
-            return
-        }
 
         try {
             byeDpiProxy.stopProxy()
@@ -238,6 +265,103 @@ class ByeDpiVpnService : LifecycleVpnService() {
         Log.i(TAG, "Proxy stopped")
     }
 
+    private suspend fun startSshTunnelIfNeeded() {
+        if (!SshHostUtils.isSshEnabled(this)) return
+        if (getPreferences().getBoolean("is_test_running", false)) return
+
+        val host = SshHostUtils.getActiveHost(this)
+            ?: SshHostUtils.getHosts(this).firstOrNull()?.also {
+                SshHostUtils.setActiveHostId(this, it.id)
+            }
+            ?: throw IOException("SSH tunnel enabled but no host selected")
+
+        val (ip, port) = getPreferences().getProxyIpAndPort()
+        val upstreamPort = port.toIntOrNull() ?: 1080
+
+        // Do not race the ciadpi startup: wait until it listens
+        SshTunnelManager.awaitUpstream(ip, upstreamPort)
+
+        // Pre-load keys marked as startup, like ConnectBot does
+        preloadStartupKeys()
+        val keyPair = resolveHostKey(host)
+        val extraKeys = PubkeyVault.loadedKeyPairs()
+
+        SshTunnelManager.start(
+            host = host,
+            upstreamIp = ip,
+            upstreamPort = upstreamPort,
+            listenPort = SshHostUtils.getLocalSshPort(this),
+            maxAttempts = if (SshHostUtils.isStopOnFail(this)) SSH_MAX_ATTEMPTS else 0,
+            keyPair = keyPair,
+            extraKeys = extraKeys,
+            onHostKeyAccepted = { h, algo, fingerprint ->
+                SshHostUtils.saveKnownKey(this, h.id, algo, fingerprint)
+            },
+        )
+
+        sshLocalPort = SshTunnelManager.awaitConnected(SSH_CONNECT_TIMEOUT_MS)
+        getPreferences().edit().remove("ssh_last_error").commit()
+        keyPair?.let { host.pubkeyId?.let { id -> PubkeyStorage.incrementTimesUsed(this, id) } }
+        watchSshState()
+    }
+
+    private fun preloadStartupKeys() {
+        PubkeyStorage.getKeys(this)
+            .filter { it.startup }
+            .forEach { pubkey ->
+                if (!PubkeyVault.isLoaded(pubkey.id)) {
+                    try {
+                        PubkeyVault.load(pubkey)
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Cannot pre-load key '${pubkey.nickname}': ${e.message}")
+                    }
+                }
+            }
+    }
+
+    private fun resolveHostKey(host: SshHost): KeyPair? {
+        val pubkeyId = when (host.authType) {
+            SshHost.AuthType.KEY -> host.pubkeyId
+            SshHost.AuthType.ANY -> host.pubkeyId
+                ?: PubkeyStorage.getDefault(this)?.id
+            else -> null
+        }
+        if (pubkeyId == null) return null
+        PubkeyVault.getLoaded(pubkeyId)?.let { return it }
+
+        val pubkey = PubkeyStorage.findKey(this, pubkeyId) ?: return null
+        return try {
+            PubkeyVault.load(pubkey)
+        } catch (e: Exception) {
+            if (host.authType == SshHost.AuthType.KEY) {
+                throw IOException("Cannot unlock SSH key '${pubkey.nickname}': ${e.message}")
+            }
+            null
+        }
+    }
+
+    private fun watchSshState() {
+        if (sshStateJob?.isActive == true) return
+
+        sshStateJob = lifecycleScope.launch {
+            SshTunnelManager.state.collect { s ->
+                if (s is SshTunnelManager.State.Failed) {
+                    Log.e(TAG, "SSH tunnel failed: ${s.error}")
+                    stop()
+                }
+            }
+        }
+    }
+
+    private fun stopSshTunnel() {
+        sshStateJob?.cancel()
+        sshStateJob = null
+        sshLocalPort = null
+        if (SshTunnelManager.isRunning) {
+            SshTunnelManager.stop()
+        }
+    }
+
     private fun startTun2Socks() {
         Log.i(TAG, "Starting tun2socks")
 
@@ -247,17 +371,47 @@ class ByeDpiVpnService : LifecycleVpnService() {
         }
 
         val sharedPreferences = getPreferences()
-        val (ip, port) = sharedPreferences.getProxyIpAndPort()
+        val useSsh = sshLocalPort != null
 
-        val dns = sharedPreferences.getStringNotNull("dns_ip", "1.1.1.1")
+        val (ip, port) = if (useSsh) {
+            Pair("127.0.0.1", sshLocalPort!!.toString())
+        } else {
+            sharedPreferences.getProxyIpAndPort()
+        }
+
+        // mapdns intercepts DNS locally and answers with fake IPs from the
+        // mapped network; later connections are sent as domain names over
+        // SOCKS5, because the SSH forwarder has no UDP support
+        val dns = if (useSsh) {
+            SshHostUtils.MAPDNS_ADDRESS
+        } else {
+            sharedPreferences.getStringNotNull("dns_ip", "1.1.1.1")
+        }
         val ipv6 = sharedPreferences.getBoolean("ipv6_enable", false)
 
         val tun2socksConfig = buildString {
             appendLine("tunnel:")
             appendLine("  mtu: 8500")
 
+            if (useSsh) {
+                appendLine("mapdns:")
+                appendLine("  address: ${SshHostUtils.MAPDNS_ADDRESS}")
+                appendLine("  port: 53")
+                appendLine("  network: ${SshHostUtils.MAPDNS_FAKE_NETWORK}")
+                appendLine("  netmask: ${SshHostUtils.MAPDNS_FAKE_NETMASK}")
+                appendLine("  cache-size: 10000")
+            }
+
             appendLine("misc:")
             appendLine("  task-stack-size: 81920")
+
+            if (useSsh) {
+                // capture hev's own diagnostics into a file readable
+                // from the logs screen
+                runCatching { File(cacheDir, "hev.log").delete() }
+                appendLine("  log-file: ${File(cacheDir, "hev.log").absolutePath}")
+                appendLine("  log-level: debug")
+            }
 
             appendLine("socks5:")
             appendLine("  address: $ip")
@@ -302,6 +456,12 @@ class ByeDpiVpnService : LifecycleVpnService() {
             File(cacheDir, "config.tmp").delete()
         } catch (e: SecurityException) {
             Log.e(TAG, "Failed to delete config file", e)
+        }
+
+        // The tunnel is down, so nothing appends to the log anymore:
+        // cap it to the configured storage budget
+        runCatching {
+            AppLog.trimFileTail(File(cacheDir, "hev.log"))
         }
 
         try {

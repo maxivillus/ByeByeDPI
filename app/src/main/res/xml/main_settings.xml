@@ -116,6 +116,29 @@
     </androidx.preference.PreferenceCategory>
 
     <androidx.preference.PreferenceCategory
+        android:title="@string/ssh_category">
+
+        <Preference
+            android:key="ssh_hosts"
+            android:icon="@drawable/ic_vpn_key"
+            android:title="@string/ssh_hosts_title"
+            android:summary="@string/ssh_hosts_summary"/>
+
+        <Preference
+            android:key="pubkeys"
+            android:icon="@drawable/ic_vpn_key"
+            android:title="@string/pubkeys_title"
+            android:summary="@string/pubkeys_summary"/>
+
+        <Preference
+            android:key="app_logs"
+            android:icon="@drawable/ic_terminal"
+            android:title="@string/logs_title"
+            android:summary="@string/logs_summary"/>
+
+    </androidx.preference.PreferenceCategory>
+
+    <androidx.preference.PreferenceCategory
         android:title="@string/byedpi_proxy"
         android:key="byedpi_proxy_category">
 

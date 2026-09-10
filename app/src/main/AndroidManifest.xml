@@ -64,6 +64,36 @@
             android:exported="false" />
 
         <activity
+            android:name=".activities.SshHostsActivity"
+            android:label="@string/ssh_hosts_title"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.SshHostEditorActivity"
+            android:label="@string/ssh_edit_host"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.PubkeyListActivity"
+            android:label="@string/pubkeys_title"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.PubkeyGenerateActivity"
+            android:label="@string/pubkey_generate_title"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.PubkeyEditorActivity"
+            android:label="@string/pubkey_editor_title"
+            android:exported="false"/>
+
+        <activity
+            android:name=".activities.LogsActivity"
+            android:label="@string/logs_title"
+            android:exported="false"/>
+
+        <activity
             android:name=".activities.TestActivity"
             android:configChanges="orientation|screenSize|keyboardHidden"
             android:label="@string/title_test"

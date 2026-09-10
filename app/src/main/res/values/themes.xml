@@ -14,6 +14,23 @@
         <item name="colorOnSurface">#212121</item>
 
         <item name="materialCardViewStyle">@style/SmallShadowCard</item>
+
+        <item name="popupMenuStyle">@style/AppPopupMenu</item>
+        <item name="android:popupMenuStyle">@style/AppPopupMenu</item>
+        <item name="listPopupWindowStyle">@style/AppPopupMenu</item>
+
+        <!-- popup menu item text sizes are resolved from the theme -->
+        <item name="android:textAppearanceSmall">@style/AppPopupMenuText</item>
+        <item name="android:textAppearanceListItemSmall">@style/AppPopupMenuText</item>
+    </style>
+
+    <style name="AppPopupMenu" parent="Widget.MaterialComponents.PopupMenu.ContextMenu">
+        <item name="android:textAppearanceSmall">@style/AppPopupMenuText</item>
+        <item name="android:textAppearanceListItemSmall">@style/AppPopupMenuText</item>
+    </style>
+
+    <style name="AppPopupMenuText" parent="TextAppearance.MaterialComponents.Body2">
+        <item name="android:textSize">13sp</item>
     </style>
 
     <style name="AppToolbar" parent="Widget.MaterialComponents.Toolbar.Primary" />
