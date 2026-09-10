@@ -7,6 +7,10 @@
 
 -keep,allowoptimization class com.trilead.ssh2.** { *; }
 
+# SOCKS5 server used by sshlib's dynamic port forwarder (the local tunnel
+# endpoint that tun2socks connects to)
+-keep,allowoptimization class org.connectbot.simplesocks.** { *; }
+
 -keep,allowoptimization class io.github.romanvht.byedpi.core.TProxyService { *; }
 -keep,allowoptimization class io.github.romanvht.byedpi.activities.** { *; }
 -keep,allowoptimization class io.github.romanvht.byedpi.services.** { *; }

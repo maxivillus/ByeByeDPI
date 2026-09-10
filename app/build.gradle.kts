@@ -7,10 +7,29 @@ plugins {
 
 val abis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
 
+// Optional release signing, configured through environment variables so CI
+// can sign releases without committing a keystore. When unset (plain local
+// builds), release output stays unsigned and debug builds are unaffected.
+val releaseKeystorePath: String? = System.getenv("BYEDPI_KEYSTORE_PATH")
+
 android {
     namespace = "io.github.romanvht.byedpi"
     //noinspection GradleDependency
     compileSdk = 36
+
+    // Pinned for reproducible local and CI builds
+    ndkVersion = "27.0.12077973"
+
+    if (!releaseKeystorePath.isNullOrBlank()) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("BYEDPI_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("BYEDPI_KEY_ALIAS")
+                keyPassword = System.getenv("BYEDPI_KEY_PASSWORD")
+            }
+        }
+    }
 
     defaultConfig {
         applicationId = "io.github.romanvht.byedpi"
@@ -38,6 +57,10 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             isMinifyEnabled = true
             isShrinkResources = true
+
+            if (!releaseKeystorePath.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             buildConfigField("String", "VERSION_NAME",  "\"${defaultConfig.versionName}-debug\"")

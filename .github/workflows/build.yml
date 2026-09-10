@@ -1,0 +1,119 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK / NDK / CMake components
+        run: |
+          sdkmanager --install \
+            "platforms;android-36" \
+            "build-tools;36.0.0" \
+            "ndk;27.0.12077973" \
+            "cmake;3.22.1"
+          yes | sdkmanager --licenses > /dev/null || true
+
+      - name: Set up Gradle
+        uses: actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      # Signing is optional: with the BYEDPI_KEYSTORE_* secrets present the
+      # release APKs are signed and installable, otherwise they stay unsigned
+      # and debug APKs are shipped instead.
+      - name: Prepare release keystore
+        id: signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.BYEDPI_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "path=$RUNNER_TEMP/release.keystore" >> "$GITHUB_OUTPUT"
+            echo "Release builds will be signed"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "path=" >> "$GITHUB_OUTPUT"
+            echo "No signing secrets configured: release APKs will be unsigned"
+          fi
+
+      - name: Build debug APKs
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Build release APKs
+        env:
+          BYEDPI_KEYSTORE_PATH: ${{ steps.signing.outputs.path }}
+          BYEDPI_KEYSTORE_PASSWORD: ${{ secrets.BYEDPI_KEYSTORE_PASSWORD }}
+          BYEDPI_KEY_ALIAS: ${{ secrets.BYEDPI_KEY_ALIAS }}
+          BYEDPI_KEY_PASSWORD: ${{ secrets.BYEDPI_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Collect installable APKs
+        env:
+          SIGNED: ${{ steps.signing.outputs.configured }}
+        run: |
+          mkdir -p artifacts
+          if [ "$SIGNED" = "true" ]; then
+            for f in app/build/outputs/apk/release/*.apk; do
+              cp "$f" "artifacts/$(basename "$f" .apk)-release.apk"
+            done
+          fi
+          for f in app/build/outputs/apk/debug/*.apk; do
+            cp "$f" "artifacts/$(basename "$f" .apk)-debug.apk"
+          done
+          ls -la artifacts
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: byebyedpi-apk-${{ github.sha }}
+          path: artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNED: ${{ steps.signing.outputs.configured }}
+        run: |
+          if [ "$SIGNED" = "true" ]; then
+            files=(app/build/outputs/apk/release/*.apk)
+          else
+            files=(artifacts/*-debug.apk)
+          fi
+          gh release create "${GITHUB_REF_NAME}" \
+            --title "ByeByeDPI ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            "${files[@]}"
