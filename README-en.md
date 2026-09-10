@@ -143,11 +143,15 @@ secrets are configured, otherwise with debug builds.
 
 ### Signing Certificate Hash
 
-SHA-256 (debug key, builds from this repository):
-`77:45:10:75:AC:EA:40:64:06:47:5D:74:D4:59:88:3A:49:A6:40:51:FA:F3:2E:42:F7:18:F3:F9:77:7A:8D:FB`
+Fingerprint of the certificate used to sign release builds from this repository
+(verify with `apksigner verify --print-certs app-universal-release.apk`):
 
-> The hash belongs to the original upstream signature. If you build a release with your
-> own key, the signature will differ.
+SHA-256:
+`50:DF:1D:DA:22:81:E8:3F:C5:3A:DF:DB:A9:63:56:78:0B:F0:4B:36:EC:27:8B:61:03:A3:B5:AD:EA:4C:AC:67`
+
+> Debug builds are signed with the standard Android debug key and have a different
+> fingerprint. Upgrades only work when the signature matches: a release APK will not
+> install over a debug one — uninstall first (export your settings before that).
 
 ### Dependencies
 
