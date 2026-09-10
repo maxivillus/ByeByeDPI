@@ -20,3 +20,7 @@ local.properties
 
 # JNI
 app/src/main/jniLibs/
+# Signing material must never be committed
+*.jks
+*.keystore
+byedpi-signing/
