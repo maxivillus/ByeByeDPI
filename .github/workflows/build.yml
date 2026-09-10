@@ -84,13 +84,21 @@ jobs:
           SIGNED: ${{ steps.signing.outputs.configured }}
         run: |
           mkdir -p artifacts
+          # "1.7.8" out of: versionName = "1.7.8"
+          VERSION="$(sed -n 's/.*versionName *= *"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)"
+          [ -n "$VERSION" ] || VERSION="dev"
+          # app-arm64-v8a-release-unsigned.apk -> arm64-v8a
+          abi_of() { echo "$1" | sed -E 's/^app-(.*)-(release|debug).*$/\1/'; }
+
           if [ "$SIGNED" = "true" ]; then
             for f in app/build/outputs/apk/release/*.apk; do
-              cp "$f" "artifacts/$(basename "$f" .apk)-release.apk"
+              abi="$(abi_of "$(basename "$f" .apk)")"
+              cp "$f" "artifacts/ByeByeDPI-${VERSION}-${abi}-release.apk"
             done
           fi
           for f in app/build/outputs/apk/debug/*.apk; do
-            cp "$f" "artifacts/$(basename "$f" .apk)-debug.apk"
+            abi="$(abi_of "$(basename "$f" .apk)")"
+            cp "$f" "artifacts/ByeByeDPI-${VERSION}-${abi}-debug.apk"
           done
           ls -la artifacts
 
@@ -109,11 +117,13 @@ jobs:
           SIGNED: ${{ steps.signing.outputs.configured }}
         run: |
           if [ "$SIGNED" = "true" ]; then
-            files=(app/build/outputs/apk/release/*.apk)
+            files=(artifacts/*-release.apk)
+            note="Подписанные release-сборки. Установите \`-arm64-v8a-\` на современные устройства."
           else
             files=(artifacts/*-debug.apk)
+            note="Секреты подписи не настроены, поэтому релиз содержит **debug-сборки** — они устанавливаются как есть (подписаны debug-ключом). Настройте \`BYEDPI_KEYSTORE_*\` secrets, чтобы получать подписанные release-APK."
           fi
           gh release create "${GITHUB_REF_NAME}" \
             --title "ByeByeDPI ${GITHUB_REF_NAME}" \
-            --generate-notes \
+            --notes "$note" \
             "${files[@]}"
